@@ -1,0 +1,33 @@
+server:
+  port: 9005
+spring:
+  datasource:
+    druid:
+      db-type: com.alibaba.druid.pool.DruidDataSource
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://127.0.0.1:3306/versionUpdate?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=UTF8
+      username: root
+      password:
+  jackson:
+    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+  servlet:
+    multipart:
+      max-request-size: 510MB
+      max-file-size : 500MB
+
+logging:
+  config: classpath:log4j2-spring.xml
+version:
+  port: 9100
+  num: 0
+  serverName: test
+host:
+  address: E:\360MoveData\Users\Administrator\Desktop\同步\
+  ip: 192.168.6.11
+bat:
+  stop: stop.bat
+  start: start.bat
+  sql: backupSql.bat
+  dbSql: dbsql.bat
+  executeSql: executeSql.bat
