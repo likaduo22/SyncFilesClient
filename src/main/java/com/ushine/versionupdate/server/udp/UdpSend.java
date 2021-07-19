@@ -40,7 +40,7 @@ public class UdpSend extends Thread {
 
                 socket.send(packet);
 
-                Thread.sleep(10000);
+                Thread.sleep(50000);
             }
 /*
             if( initialized.compareAndSet(false, true) ) {
@@ -97,7 +97,7 @@ public class UdpSend extends Thread {
      */
     private static String readFileVersion() {
 
-        File file = new File("E:\\360MoveData\\Users\\Administrator\\Desktop\\同步\\version.txt");
+        File file = new File("E:\\360MoveData\\Users\\Administrator\\Desktop\\tongbu\\version.txt");
         String a = "";
         try (InputStreamReader inputStreamReader = new InputStreamReader(new FileInputStream(file));
              BufferedReader bufferedOutputStream = new BufferedReader(inputStreamReader)

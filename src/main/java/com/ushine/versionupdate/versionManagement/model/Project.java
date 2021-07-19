@@ -40,7 +40,7 @@ public class Project implements Serializable {
     /**
      * 服务端口号
      */
-    private int port;
+    private String port;
 
     /**
      *  数据库地址

@@ -49,7 +49,7 @@ public class TcpClient {
     @Value(value = "${version.serverName}")
     private String serverName;
     //执行sql文件 bat文件名
-    @Value(value = "${version.executeSql}")
+    @Value(value = "${bat.executeSql}")
     private String executeSql;
 
     @Resource
@@ -79,6 +79,8 @@ public class TcpClient {
                     writeBytesToFile(o.getProjectFile(),path);
                     //解压文件
                     File unzip = ZipUtil.unzip(path);
+                    //对于同步文件的处理
+                    dealWithUpdateVersion(unzip.toString(),o);
 
                     log.info("解压返回路径:"+unzip.toPath().toString());
 
@@ -118,7 +120,9 @@ public class TcpClient {
      */
     private static void writeFile(int version) {
 
-        File file = new File("E:\\360MoveData\\Users\\Administrator\\Desktop\\同步\\version.txt");
+        log.info("更改的版本号："+version);
+
+        File file = new File("E:\\360MoveData\\Users\\Administrator\\Desktop\\tongbu\\version.txt");
 
         try (BufferedWriter out = new BufferedWriter(new FileWriter(file))) {
             out.write(version + ""); // \r\n即为换行
@@ -132,11 +136,17 @@ public class TcpClient {
     /**
      * 同步文件解压后的处理
      * @param unzipPath 文件解压后的路径
+     * @param project 同步对象
      */
     private void dealWithUpdateVersion(String unzipPath,Project project){
+
+        log.info("开始处理接收的新版文件!");
         //停止服务脚本路径
         Path path = Paths.get(unzipPath, stop);
-        String upVersionPath = getServerPath(address + (project.getVersion() - 1));
+
+        int ver = project.getVersion() == 0 ? 0 : project.getVersion()-1;
+
+        String upVersionPath = getServerPath(address + (ver));
             //执行停止服务脚本
         try {
             batExecution.executionBat(path,String.valueOf(project.getPort()));
@@ -151,11 +161,11 @@ public class TcpClient {
                 String replace = now.replace(" ", "-");
                 String replace1 = replace.replace(":", "-");
                 //备份sql文件存放路径
-                Path dbPathDirector = Paths.get(project.getServerPath(), project.getVersion() - 1+"");
+                Path dbPathDirector = Paths.get(project.getServerPath(), ver+"");
                 //备份sql名称
                 String sqlName = serverName + "-" + replace1 + ".sql";
                 //备份sql文件存放路径包含文件名称
-                Path pathFile = Paths.get(project.getServerPath(), project.getVersion() - 1 + "", sqlName);
+                Path pathFile = Paths.get(project.getServerPath(), ver + "", sqlName);
 
                 if(!Files.exists(dbPathDirector)){
 
@@ -179,17 +189,18 @@ public class TcpClient {
                 batExecution.executionBat(startPath, serverName, project.getServerPath());
 
                 //检测port是否启动占用 未启动成功则恢复操作
-                if (!portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort())) {
+                if (portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort())) {
+
+                    //更改文件版本号
+                    writeFile(project.getVersion());
+                }else if(portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort()) && integer == ProjectConstant.SUCCESS) {
+
                     //恢复服务包操作
                     fileCopyUtil(upVersionPath, project.getServerPath());
 
                     Path executeSqlPath = Paths.get(unzipPath, executeSql);
                     //恢复数据库
                     batExecution.executionBat(executeSqlPath, project.getDbUser(), project.getDbPass(), pathFile.toString(), project.getDbBinPath(), project.getDbName());
-                }else if(portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort()) && integer == ProjectConstant.SUCCESS) {
-
-                    //更改文件版本号
-                    writeFile(project.getVersion());
                 }
 
             }else {
@@ -201,16 +212,18 @@ public class TcpClient {
 
                 //执行启动服务脚本
                 Path startPath = Paths.get(unzipPath, start);
+
                 batExecution.executionBat(startPath, serverName, project.getServerPath());
 
                 //检测port是否启动占用 未启动成功则恢复操作
-                if (!portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort())) {
-                    //恢复服务包操作
-                    fileCopyUtil(upVersionPath, project.getServerPath());
-                }else {
+                if (portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort())) {
 
                     //更改文件版本号
                     writeFile(project.getVersion());
+                }else {
+
+                    //恢复服务包操作
+                    fileCopyUtil(upVersionPath, project.getServerPath());
                 }
             }
 
@@ -242,7 +255,7 @@ public class TcpClient {
 
                 if(fileName.equals(serverName)){
 
-                    return unzipPath+name;
+                    return Paths.get(unzipPath,name).toString();
                 }
 
             }

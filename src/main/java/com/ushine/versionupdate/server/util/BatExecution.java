@@ -1,5 +1,6 @@
 package com.ushine.versionupdate.server.util;
 
+import com.ushine.versionupdate.server.constant.ProjectConstant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -36,7 +37,22 @@ public class BatExecution {
         InputStream in = exec.getInputStream();
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
 //        String output = bufferedReader.readLine();
-        return Integer.parseInt(bufferedReader.readLine());
+        String s= "1";
+
+        while (bufferedReader.readLine() != null){
+
+            s=bufferedReader.readLine();
+
+            if(Integer.parseInt(s)== ProjectConstant.SUCCESS || Integer.parseInt(s) ==   ProjectConstant.FAIL){
+
+                return Integer.parseInt(s);
+
+            }
+        }
+
+        log.info("执行脚本："+path+"返回值："+s);
+
+        return Integer.parseInt(s);
 
        /* while(output!= null){
 
