@@ -1,13 +1,8 @@
 package com.ushine.versionupdate.server.util;
 
-import com.ushine.versionupdate.server.constant.ProjectConstant;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.file.Path;
 
 /**
@@ -23,7 +18,9 @@ public class BatExecution {
      * @param path 脚本路径
      * @param args 脚本所需参数
      */
-    public Integer executionBat(Path path, String... args) throws IOException {
+    public Integer executionBat(Path path, String... args) {
+
+        String s= "1";
 
         StringBuilder arg = new StringBuilder(" ");
 
@@ -33,32 +30,59 @@ public class BatExecution {
         }
 
         log.info("执行脚本："+path+arg);
-        Process exec = Runtime.getRuntime().exec("cmd.exe /c start /b  " + path.toString() + arg);
-        InputStream in = exec.getInputStream();
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(in));
-//        String output = bufferedReader.readLine();
-        String s= "1";
 
-        while (bufferedReader.readLine() != null){
+        try {
+            Process exec = Runtime.getRuntime().exec("cmd.exe /c start /b  " + path.toString() + arg);
 
-            s=bufferedReader.readLine();
+            exec.waitFor();
 
-            if(Integer.parseInt(s)== ProjectConstant.SUCCESS || Integer.parseInt(s) ==   ProjectConstant.FAIL){
+            s = String.valueOf(exec.exitValue());
 
-                return Integer.parseInt(s);
+        } catch (Exception e) {
 
-            }
+            log.info(e.getMessage());
         }
 
-        log.info("执行脚本："+path+"返回值："+s);
-
         return Integer.parseInt(s);
-
-       /* while(output!= null){
-
-            System.out.println(output);
-
-            output=bufferedReader.readLine();
-        }*/
     }
+
+
+
+   /* private static byte[] readStream(InputStream inStream) throws Exception {
+
+        ByteArrayOutputStream outSteam = new ByteArrayOutputStream();
+
+        byte[] buffer = new byte[1024];
+
+        int len;
+
+        while ((len = inStream.read(buffer)) != -1) {
+
+            outSteam.write(buffer, 0, len);
+        }
+
+        outSteam.close();
+
+        return outSteam.toByteArray();
+
+    }
+
+
+    private static String replaceBlank(String str) {
+
+        String dest = "";
+
+        if (str != null) {
+
+            Pattern p = Pattern.compile("\\s*|\t|\r|\n");
+
+            Matcher m = p.matcher(str);
+
+            dest = m.replaceAll("");
+
+        }
+
+        return dest;
+
+    }*/
 }

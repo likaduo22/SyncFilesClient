@@ -50,7 +50,7 @@ public class UdpReceive extends Thread {
                      tcpClient.client();
                 }
 
-                Thread.sleep(55000);
+                Thread.sleep(51000);
             }
         } catch (Exception e) {
             e.printStackTrace();

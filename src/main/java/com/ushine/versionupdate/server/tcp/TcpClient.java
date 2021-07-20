@@ -10,6 +10,7 @@ import com.ushine.versionupdate.versionManagement.model.Project;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.io.*;
@@ -51,6 +52,9 @@ public class TcpClient {
     //执行sql文件 bat文件名
     @Value(value = "${bat.executeSql}")
     private String executeSql;
+    //服务名称
+    @Value(value = "${version.versionFile}")
+    private String versionFile;
 
     @Resource
     private BatExecution batExecution;
@@ -65,7 +69,6 @@ public class TcpClient {
 
 
         ) {
-
                 // 网络上面的流
                 InputStream is = socket.getInputStream();
                 log.info("开始接收服务端下发更新文件!");
@@ -118,11 +121,11 @@ public class TcpClient {
      * 更改文件版本号
      * @param version 版本号
      */
-    private static void writeFile(int version) {
+    private  void writeFile(int version) {
 
         log.info("更改的版本号："+version);
 
-        File file = new File("E:\\360MoveData\\Users\\Administrator\\Desktop\\tongbu\\version.txt");
+        File file = new File(versionFile);
 
         try (BufferedWriter out = new BufferedWriter(new FileWriter(file))) {
             out.write(version + ""); // \r\n即为换行
@@ -143,95 +146,159 @@ public class TcpClient {
         log.info("开始处理接收的新版文件!");
         //停止服务脚本路径
         Path path = Paths.get(unzipPath, stop);
-
+        //版本号处理
         int ver = project.getVersion() == 0 ? 0 : project.getVersion()-1;
-
+        //上一版本服务包存放路径
         String upVersionPath = getServerPath(address + (ver));
-            //执行停止服务脚本
+        //执行sql bat文件路径
+        Path executeSqlPath = Paths.get(unzipPath, executeSql);
+        //执行停止服务脚本
         try {
-            batExecution.executionBat(path,String.valueOf(project.getPort()));
-
-            //判断是否有sql处理 如果存在则执行sql脚本 包含备份目前版本数据导出sql 存放至对应versionPath和version-1目录
-            if(project.getNoSql() == ProjectConstant.HAVE){
-                //执行sql脚本路径
-                Path sqlPath = Paths.get(unzipPath, sql);
-                //当时时间
-                String now = DateUtil.now();
-                //处理时间成为备份sql的文件名称
-                String replace = now.replace(" ", "-");
-                String replace1 = replace.replace(":", "-");
-                //备份sql文件存放路径
-                Path dbPathDirector = Paths.get(project.getServerPath(), ver+"");
-                //备份sql名称
-                String sqlName = serverName + "-" + replace1 + ".sql";
-                //备份sql文件存放路径包含文件名称
-                Path pathFile = Paths.get(project.getServerPath(), ver + "", sqlName);
-
-                if(!Files.exists(dbPathDirector)){
-
-                    Files.createDirectories(dbPathDirector);
+            //执行停止服务脚本
+            Integer integer = batExecution.executionBat(path, String.valueOf(project.getPort()));
+            if(integer == ProjectConstant.SUCCESS) {
+                Thread.sleep(5000);
+                log.info("执行停止后开始休眠!");
+                //判断是否有sql处理
+                if (project.getNoSql() == ProjectConstant.HAVE) {
+                    /**
+                     * 需要操作sql时的执行
+                     */
+                    sqlOperating(unzipPath, project, ver, executeSqlPath, upVersionPath);
+                } else {
+                    /**
+                     * 不需要操作sql时的执行
+                     */
+                    noSqlOperating(unzipPath, project, upVersionPath);
                 }
-                //执行备份sql脚本(包含数据结构更改执行对应的表结构)
-                Integer integer = batExecution.executionBat(sqlPath,
-                        project.getDbHost(), project.getDbPort() + "", project.getDbUser(), project.getDbPass(), project.getDbName(),
-                        pathFile.toString(), project.getDbBinPath(), project.getSqlName());
+            }
+        } catch (IOException e) {
 
-                //如果sql执行成功替换服务包
-                if(integer == ProjectConstant.SUCCESS){
-                    //对应包复制进服务路径
-                    String serverPath = getServerPath(unzipPath);
-                    //把更新服务包复制到服务路径下
-                    fileCopyUtil(serverPath,project.getServerPath());
-                }
+            log.error(e.getMessage());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
-                //执行启动服务脚本
-                Path startPath = Paths.get(unzipPath, start);
-                batExecution.executionBat(startPath, serverName, project.getServerPath());
 
-                //检测port是否启动占用 未启动成功则恢复操作
-                if (portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort())) {
+    /**
+     * 执行有sql操作逻辑
+     * @param unzipPath 解压路径
+     * @param project 同步对
+     * @param ver 版本号
+     * @param executeSqlPath 执行修改sql路径
+     * @param upVersionPath 上一版本服务包路径
+     * @throws IOException IO异常
+     */
+    private void sqlOperating(String unzipPath,Project project,int ver,Path executeSqlPath,String upVersionPath) throws IOException {
 
-                    //更改文件版本号
-                    writeFile(project.getVersion());
-                }else if(portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort()) && integer == ProjectConstant.SUCCESS) {
+        //执行备份sql脚本路径
+        Path backSqlPath = Paths.get(unzipPath, sql);
+        //当时时间
+        String now = DateUtil.now();
+        //处理时间成为备份sql的文件名称
+        String replace = now.replace(" ", "-");
+        String replace1 = replace.replace(":", "-");
+        //备份sql文件存放路径
+        Path dbPathDirector = Paths.get(project.getServerPath(), ver+"");
+        //备份sql名称
+        String sqlName = serverName + "-" + replace1 + ".sql";
+        //备份sql文件存放路径包含文件名称
+        Path pathFile = Paths.get(project.getServerPath(), ver + "", sqlName);
 
-                    //恢复服务包操作
-                    fileCopyUtil(upVersionPath, project.getServerPath());
+        if(!Files.exists(dbPathDirector)){
 
-                    Path executeSqlPath = Paths.get(unzipPath, executeSql);
-                    //恢复数据库
-                    batExecution.executionBat(executeSqlPath, project.getDbUser(), project.getDbPass(), pathFile.toString(), project.getDbBinPath(), project.getDbName());
-                }
+            Files.createDirectories(dbPathDirector);
+        }
+        //执行备份sql脚本
+        Integer integer = batExecution.executionBat(backSqlPath,
+                project.getDbHost(), project.getDbPort() + "", project.getDbUser(), project.getDbPass(), project.getDbName(),
+                pathFile.toString(), project.getDbBinPath());
 
-            }else {
+        Integer integer1 = ProjectConstant.FAIL;
+        //执行更改数据结构sql
+        if(!StringUtils.isEmpty(project.getSqlName())){
+
+            //执行修改表sql路径
+            Path sqlPath = Paths.get(unzipPath, project.getSqlName());
+            //执行修改表脚本
+            integer1 = batExecution.executionBat(executeSqlPath, project.getDbUser(), project.getDbPass(), sqlPath.toString(), project.getDbBinPath(), project.getDbName());
+            //在需要执行修改表sql时 必须满足修改表和备份sql都成功 才能替换服务包
+            if(integer == ProjectConstant.SUCCESS && integer1 == ProjectConstant.SUCCESS){
 
                 //对应包复制进服务路径
                 String serverPath = getServerPath(unzipPath);
                 //把更新服务包复制到服务路径下
                 fileCopyUtil(serverPath,project.getServerPath());
-
-                //执行启动服务脚本
-                Path startPath = Paths.get(unzipPath, start);
-
-                batExecution.executionBat(startPath, serverName, project.getServerPath());
-
-                //检测port是否启动占用 未启动成功则恢复操作
-                if (portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort())) {
-
-                    //更改文件版本号
-                    writeFile(project.getVersion());
-                }else {
-
-                    //恢复服务包操作
-                    fileCopyUtil(upVersionPath, project.getServerPath());
-                }
             }
 
-        } catch (IOException e) {
+        }else{
 
-            log.error(e.getMessage());
+            //在只需要备份sql时 备份sql成功则可替换服务包
+            if(integer == ProjectConstant.SUCCESS){
+                //对应包复制进服务路径
+                String serverPath = getServerPath(unzipPath);
+                //把更新服务包复制到服务路径下
+                fileCopyUtil(serverPath,project.getServerPath());
+            }
+        }
+        //执行启动服务脚本
+        Path startPath = Paths.get(unzipPath, start);
+        batExecution.executionBat(startPath, serverName, project.getServerPath());
+
+        //检测port是否启动占用 未启动成功则恢复操作
+        if (portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort())) {
+            //服务启动成功 更改文件版本号
+            writeFile(project.getVersion());
+        }else if(integer == ProjectConstant.SUCCESS && integer1 == ProjectConstant.SUCCESS) {
+            /**
+             * 服务启动失败并且修改了表的情况下 需替换服务包 和 恢复sql数据
+             */
+            //恢复服务包操作
+            fileCopyUtil(upVersionPath, project.getServerPath());
+
+            //恢复数据库
+            batExecution.executionBat(executeSqlPath, project.getDbUser(), project.getDbPass(), pathFile.toString(), project.getDbBinPath(), project.getDbName());
+        }else{
+            /**
+             * 否则执行回滚服务包
+             */
+            //恢复服务包操作
+            fileCopyUtil(upVersionPath, project.getServerPath());
         }
     }
+
+
+    /**
+     * 执行无sql操作逻辑
+     * @param unzipPath 解压路径
+     * @param project 同步对象
+     * @param upVersionPath 上一版本服务员包路径
+     */
+    private void noSqlOperating(String unzipPath,Project project,String upVersionPath){
+
+        //对应包复制进服务路径
+        String serverPath = getServerPath(unzipPath);
+        //把更新服务包复制到服务路径下
+        fileCopyUtil(serverPath,project.getServerPath());
+
+        //执行启动服务脚本
+        Path startPath = Paths.get(unzipPath, start);
+        batExecution.executionBat(startPath, serverName, project.getServerPath());
+
+        //检测port是否启动占用 未启动成功则恢复操作
+        if (portFindUtil.isSocketAliveUitlitybyCrunchify("localhost", project.getPort())) {
+
+            //启动成功 更改文件版本号
+            writeFile(project.getVersion());
+        }else {
+
+            //恢复服务包操作
+            fileCopyUtil(upVersionPath, project.getServerPath());
+            batExecution.executionBat(startPath, serverName, project.getServerPath());
+        }
+    }
+
 
 
 
