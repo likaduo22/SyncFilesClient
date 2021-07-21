@@ -20,7 +20,7 @@ class DemoApplicationTests {
     @Test
     void contextLoads() throws IOException, InterruptedException {
 
-        batExecution.executionBat("E:\\sss\\startJar.bat","9001","55","66");
+       // batExecution.executionBat("E:\\sss\\startJar.bat","9001","55","66");
     }
 
 }

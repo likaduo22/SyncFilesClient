@@ -21,9 +21,10 @@ logging:
 version:
   port: 9100
   num: 0
-  serverName: test
+  serverName: xq-showroom
+  versionFile: E:\360MoveData\Users\Administrator\Desktop\tongbu\version.txt
 host:
-  address: E:\360MoveData\Users\Administrator\Desktop\同步\
+  address: D:\syncFiles\
   ip: 192.168.6.11
 bat:
   stop: stop.bat
