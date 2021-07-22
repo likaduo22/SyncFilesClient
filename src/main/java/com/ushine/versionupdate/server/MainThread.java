@@ -22,6 +22,12 @@ public class MainThread {
     private String versionFile;
     @Resource
     private TcpClient tcpClient;
+    //tcp服务端端口
+    @Value(value = "${udp.port}")
+    private int port;
+    //tcp服务端ip
+    @Value(value = "${udp.ip}")
+    private String ip;
 
     @PostConstruct
     void initUdp() {
@@ -29,7 +35,7 @@ public class MainThread {
             try {
                 DatagramSocket server = new DatagramSocket();
 
-                new Thread(new ApplicationInit(versionFile,server,tcpClient)).start();
+                new Thread(new ApplicationInit(versionFile,server,tcpClient,ip,port)).start();
 
               //  new Thread(new UdpSend(server)).start();
 

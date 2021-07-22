@@ -20,11 +20,17 @@ public class ApplicationInit extends Thread{
 
     private DatagramSocket socket;
 
-    public ApplicationInit(String filePath,DatagramSocket socket,TcpClient tcpClient) {
+    private int port;
+
+    private String ip;
+
+    public ApplicationInit(String filePath,DatagramSocket socket,TcpClient tcpClient,String ip,int port) {
 
         this.filePath = filePath;
         this.socket = socket;
         this.tcpClient = tcpClient;
+        this.ip = ip;
+        this.port = port;
     }
 
     @Override
@@ -37,7 +43,7 @@ public class ApplicationInit extends Thread{
             FileUtil.writeBytes("0".getBytes(),filePath);
         }
 
-        new Thread(new UdpSend(socket)).start();
+        new Thread(new UdpSend(socket,filePath,port,ip)).start();
 
         new Thread(new UdpReceive(socket,tcpClient)).start();
     }

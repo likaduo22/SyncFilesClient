@@ -19,8 +19,19 @@ public class UdpSend extends Thread {
 
     private DatagramSocket socket;
 
-    public UdpSend(DatagramSocket socket) {
+    private String versionPath;
+
+    private int port;
+
+    private String ip;
+
+
+
+    public UdpSend(DatagramSocket socket,String versionPath,int port,String ip) {
         this.socket = socket;
+        this.versionPath = versionPath;
+        this.ip = ip;
+        this.port = port;
 
     }
 
@@ -29,8 +40,7 @@ public class UdpSend extends Thread {
         try {
 
             while (true) {
-                InetAddress address = InetAddress.getByName("localhost");
-                int port = 8800;
+                InetAddress address = InetAddress.getByName(ip);
                 byte[] data = readFileVersion().getBytes();
                 // 2.创建数据报，包含发送的数据信息
                 DatagramPacket packet = new DatagramPacket(data, data.length, address, port);
@@ -95,9 +105,9 @@ public class UdpSend extends Thread {
      *
      * @return 文件版本号
      */
-    private static String readFileVersion() {
+    private  String readFileVersion() {
 
-        File file = new File("E:\\360MoveData\\Users\\Administrator\\Desktop\\tongbu\\version.txt");
+        File file = new File(versionPath);
         String a = "";
         try (InputStreamReader inputStreamReader = new InputStreamReader(new FileInputStream(file));
              BufferedReader bufferedOutputStream = new BufferedReader(inputStreamReader)

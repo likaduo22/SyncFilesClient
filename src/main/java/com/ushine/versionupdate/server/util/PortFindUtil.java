@@ -22,9 +22,9 @@ public class PortFindUtil {
         boolean isAlive = false;
 
         try {
-            Thread.sleep(10000);
+            Thread.sleep(20000);
 
-            log.info("开始进入判断是否启动成功服务方法!!!!!!!");
+            //log.info("开始进入判断是否启动成功服务方法!!!!!!!");
             // 创建一个套接字
             SocketAddress socketAddress = new InetSocketAddress(hostName, Integer.parseInt(port));
             Socket socket = new Socket();
@@ -32,7 +32,7 @@ public class PortFindUtil {
             // 超时设置，单位毫秒
             int timeout = 2000;
 
-            log.info("hostName: " + hostName + ", port: " + port);
+           // log.info("hostName: " + hostName + ", port: " + port);
             try {
                 socket.connect(socketAddress, timeout);
                 socket.close();
